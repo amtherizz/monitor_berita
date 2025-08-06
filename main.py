@@ -79,7 +79,6 @@ def index():
         color_discrete_map=warna_sentimen,
         title='Jumlah Berita per Sentimen'
     )
-    df = df.drop(columns=['Unnamed: 0'])
     fig_bar_sentimen.update_traces(textposition='outside')
     fig_bar_sentimen.update_layout(yaxis_range=[0, sentimen_count['count'].max() + 5])
     return render_template('index.html', 
