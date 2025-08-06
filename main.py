@@ -47,7 +47,6 @@ def index():
     # waktu
     df['waktu'] = pd.to_datetime(df['waktu'], errors='coerce')
     df_time = df.groupby(df['waktu'].dt.date).size().reset_index(name='jumlah')
-    print(df_time[['waktu','jumlah']])
     fig_waktu = px.line(df_time, x='waktu', y='jumlah', title='Jumlah Berita per Hari')
     positif_text = ' '.join(df[df['sentiment'] == 'positif']['bukti_sentiment'].dropna().astype(str))
     positif_text = bersihkan_kalimat(positif_text)
