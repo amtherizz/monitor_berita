@@ -85,9 +85,9 @@ def index():
     return render_template('index.html', 
                            tables=[df.to_html(classes='table table-striped', index=False)], 
                            graph_sentimen=fig_sentimen.to_html(full_html=False),
-                           graph_media=fig_media.to_html(full_html=False),
-                           graph_waktu=fig_waktu.to_html(full_html=False),
-                           graph_sentimenbar=fig_bar_sentimen.to_html(full_html=False))
+                           graph_media=fig_media.to_html(full_html=False,include_plotlyjs=False),
+                           graph_waktu=fig_waktu.to_html(full_html=False,include_plotlyjs=False),
+                           graph_sentimenbar=fig_bar_sentimen.to_html(full_html=False,include_plotlyjs=False))
 
 if __name__ == '__main__':
     os.makedirs('data', exist_ok=True)
