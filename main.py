@@ -56,7 +56,7 @@ def index():
     positif_text = ' '.join(df[df['sentiment'] == 'positif']['bukti_sentiment'].dropna().astype(str))
     positif_text = bersihkan_kalimat(positif_text)
     wcp = False
-    if negatif_text:
+    if positif_text:
         wc_positif = WordCloud(width=800, height=400, background_color='white').generate(positif_text)
         wc_positif.to_file('static/wordcloud_positif.png')
         wcp = True
