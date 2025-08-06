@@ -55,14 +55,20 @@ def index():
     fig_waktu = px.line(df_time, x='waktu', y='jumlah', title='Jumlah Berita per Hari')
     positif_text = ' '.join(df[df['sentiment'] == 'positif']['bukti_sentiment'].dropna().astype(str))
     positif_text = bersihkan_kalimat(positif_text)
-    wc_positif = WordCloud(width=800, height=400, background_color='white').generate(positif_text)
-    wc_positif.to_file('static/wordcloud_positif.png')
+    wcp = False
+    if negatif_text:
+        wc_positif = WordCloud(width=800, height=400, background_color='white').generate(positif_text)
+        wc_positif.to_file('static/wordcloud_positif.png')
+        wcp = True
 
     # WordCloud Negatif
     negatif_text = ' '.join(df[df['sentiment'] == 'negatif']['bukti_sentiment'].dropna().astype(str))
     negatif_text = bersihkan_kalimat(negatif_text)
-    wc_negatif = WordCloud(width=800, height=400, background_color='white').generate(negatif_text or 'X')
-    wc_negatif.to_file('static/wordcloud_negatif.png')
+    wcn = False
+    if negatif_text:
+        wc_negatif = WordCloud(width=800, height=400, background_color='white').generate(negatif_text)
+        wc_negatif.to_file('static/wordcloud_negatif.png')
+        wcn = True
 
     # sentimen bar
 
@@ -82,7 +88,9 @@ def index():
     fig_bar_sentimen.update_traces(textposition='outside')
     fig_bar_sentimen.update_layout(yaxis_range=[0, sentimen_count['count'].max() + 5])
     return render_template('index.html', 
-                           tables=[df.to_html(classes='table table-striped', index=False)], 
+                           tables=[df.to_html(classes='table table-striped', index=False)],
+                           wc_p=wcp,
+                           wc_n=wcn 
                            graph_sentimen=fig_sentimen.to_html(full_html=False),
                            graph_media=fig_media.to_html(full_html=False,include_plotlyjs=False),
                            graph_waktu=fig_waktu.to_html(full_html=False,include_plotlyjs=False),
