@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monitoring Berita</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body class="container">
+    <h1 class="my-4 text-center">Dashboard Monitoring Berita BIG</h1>
+
+    <h3>Persentase sentiment (pie chart)</h3>
+        {{graph_sentimen|safe}}
+
+    <h3>Jumlah sentiment (bar chart)</h3>
+
+        {{ graph_sentimenbar|safe }}
+        
+    
+    <div class="my-4">
+        <h3>WordCloud Isu Positif</h3>
+        <img src="{{ url_for('static', filename='wordcloud_positif.png') }}" class="img-fluid">
+    </div>
+    
+    <div class="my-4">
+        <h3>WordCloud Isu Negatif</h3>
+        <img src="{{ url_for('static', filename='wordcloud_negatif.png') }}" class="img-fluid">
+    </div>
+    
+
+    <h3>Visualisasi media</h3>
+        {{graph_media|safe}}
+
+    <h3>Timeline Jumlah Berita</h3>
+        {{graph_waktu|safe}}
+
+
+    <div class="my-4">
+        <h3>Data Berita</h3>
+        <div class="table-responsive">
+            {{ tables[0]|safe }}
+        </div>
+    </div>
+</body>
+</html>
