@@ -15,13 +15,13 @@
     <h3>Jumlah sentiment (bar chart)</h3>
 
         {{ graph_sentimenbar|safe }}
-    {% if wcp %}
+    {% if wc_p %}
         <div class="my-4">
             <h3>WordCloud Isu Positif</h3>
             <img src="{{ url_for('static', filename='wordcloud_positif.png') }}" class="img-fluid">
         </div>
     {% endif %}
-    {% if wcn %}
+    {% if wc_n %}
         <div class="my-4">
             <h3>WordCloud Isu Negatif</h3>
             <img src="{{ url_for('static', filename='wordcloud_negatif.png') }}" class="img-fluid">
