@@ -206,5 +206,5 @@ def main(start="08-01",end="08-02") -> pd.DataFrame:
         except Exception as e:
             print('[ERROR] '+str(e))
     return result
-os.makedirs('data',exist_ok=True)
-main(start='07-17',end='07-30').to_excel('07_17-07_30.xlsx',index=False)
+# os.makedirs('data',exist_ok=True)
+# main(start='07-17',end='07-30').to_excel('07_17-07_30.xlsx',index=False)
