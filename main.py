@@ -61,7 +61,7 @@ def index():
     # WordCloud Negatif
     negatif_text = ' '.join(df[df['sentiment'] == 'negatif']['bukti_sentiment'].dropna().astype(str))
     negatif_text = bersihkan_kalimat(negatif_text)
-    wc_negatif = WordCloud(width=800, height=400, background_color='white').generate(negatif_text or 'None')
+    wc_negatif = WordCloud(width=800, height=400, background_color='white').generate(negatif_text or 'X')
     wc_negatif.to_file('static/wordcloud_negatif.png')
 
     # sentimen bar
