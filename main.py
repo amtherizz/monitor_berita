@@ -90,7 +90,7 @@ def index():
     return render_template('index.html', 
                            tables=[df.to_html(classes='table table-striped', index=False)],
                            wc_p=wcp,
-                           wc_n=wcn 
+                           wc_n=wcn,
                            graph_sentimen=fig_sentimen.to_html(full_html=False),
                            graph_media=fig_media.to_html(full_html=False,include_plotlyjs=False),
                            graph_waktu=fig_waktu.to_html(full_html=False,include_plotlyjs=False),
