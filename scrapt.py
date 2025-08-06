@@ -2,12 +2,12 @@ import json,requests,bs4
 import dateparser,csv
 import pandas as pd
 import uuid
-import json,re
+import json,re,os
 import requests  # masih bisa dipakai untuk fallback
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-import time
+import time,base64
 import dateparser
 import threading
 # import queue
@@ -24,14 +24,23 @@ options.add_argument('--headless')
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-gpu')
 options.add_argument('--disable-logging')
+options.add_argument("--disable-dev-shm-usage")
 options.add_argument('--log-level=3')
+options.add_argument("--window-size=1920,1080")  
 prefs = {
     "profile.managed_default_content_settings.images": 2,
     "profile.managed_default_content_settings.video": 2,
     "profile.managed_default_content_settings.audio": 2
 }
+options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
 options.add_experimental_option("prefs", prefs)
-
+def fullpage_screenshot(driver, file_path):
+    result = driver.execute_cdp_cmd("Page.captureScreenshot", {
+        "fromSurface": True,
+        "captureBeyondViewport": True
+    })
+    with open(file_path, "wb") as f:
+        f.write(base64.b64decode(result['data']))
 system_prompt = """
         Anda adalah asisten yang ahli dalam mengekstraksi informasi penting dari berita. Tugas Anda adalah mengidentifikasi paragraf-paragraf inti, sumber media, narasumber (jika ada), reporter (jika ada), sentimen terhadap Badan Informasi Geospasial (BIG) beserta buktinya, dan juga menyajikan teks berita lengkap yang sudah bersih dari elemen non-berita.
 
@@ -122,22 +131,24 @@ def ekstrak_berita(news: str) -> str:
         return json.loads(json_match)
     except:print(output)
 
-def main(start="08-01",end="08-04"):
-    global should_stop
+def main(start="08-01",end="08-02") -> pd.DataFrame:
     from datetime import datetime, timedelta
-    filename = start+'--'+end+'.xlsx'
-    # print('success')
-
     start_date = datetime.strptime("2025-"+start, "%Y-%m-%d")
     end_date = datetime.strptime("2025-"+end, "%Y-%m-%d")
-    df = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment', 'bukti_sentiment', 'judul', 'link', 'reporter'])
+    result = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment','bukti_sentiment', 'judul', 'link', 'reporter'])
     # Loop per tanggal
     print('[INFO] tanggal awal '+start_date.strftime("%Y/%m/%d"))
     print('[INFO] tanggal akhir '+end_date.strftime("%Y/%m/%d"))
     # return filename
     current_date = start_date
     while current_date <= end_date:
+        filename = current_date.strftime('%m-%d')+'.xlsx'
+        if (filename in os.listdir('data')) and (datetime.now().strftime('%m-%d') != current_date.strftime('%m-%d')):
+            current_date += timedelta(days=1)
+            result = pd.concat([result,pd.read_excel('data/'+filename)],ignore_index=True)
+            continue
         try :
+            df = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment', 'bukti_sentiment', 'judul', 'link', 'reporter'])
             date_str = current_date.strftime("%m/%d/%Y")  # Format: MM/DD/YYYY untuk `cd_min` dan `cd_max`
             print('[INFO] mengambil berita tanggal '+date_str)
             url = (
@@ -183,13 +194,17 @@ def main(start="08-01",end="08-04"):
                         narasumber, sentimen, reporter, bukti = '', 'netral', '', ''
                 else:
                     narasumber, sentimen, reporter, bukti = '', 'netral', '', ''
+                if not bukti:
+                    fullpage_screenshot(driver,media+".png")
                 driver.quit()
                 df.loc[len(df)] = [media, date, ex_news['inti_berita'] if ex_news else '', narasumber, sentimen, bukti , title, link, reporter]
                 print(df.loc[len(df)-1])
             # Lanjut ke hari berikutnya
             current_date += timedelta(days=1)
+            result = pd.concat([result,df],ignore_index=True)
+            df.to_excel('data/'+filename,index=False)   
         except Exception as e:
             print('[ERROR] '+str(e))
-    df.to_excel(filename)
-    return filename
-main()
+    return result
+os.makedirs('data',exist_ok=True)
+main(start='07-17',end='07-30').to_excel('07_17-07_30.xlsx',index=False)
