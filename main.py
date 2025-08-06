@@ -85,4 +85,5 @@ def index():
                            graph_sentimenbar=fig_bar_sentimen.to_html(full_html=False))
 
 if __name__ == '__main__':
+    os.makedirs('data', exist_ok=True)
     app.run(debug=True)
