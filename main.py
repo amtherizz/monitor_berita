@@ -22,7 +22,7 @@ def bersihkan_kalimat(teks):
 @app.route('/')
 def index():
     start = request.args.get('start') or (datetime.now() - timedelta(days=7)).strftime('%m-%d')
-    end = request.args.get('end') or datetime.now().strftime('%m-%d')
+    end = request.args.get('end') or (datetime.now()-timedelta(days=1)).strftime('%m-%d') 
     df = scrapt.main(start,end)
     # df = pd.read_excel('/home/user/app/output/server/data/17-31juli.xlsx')
 

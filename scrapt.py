@@ -145,8 +145,10 @@ def main(start="08-01",end="08-02") -> pd.DataFrame:
         filename = current_date.strftime('%m-%d')+'.xlsx'
         if (filename in os.listdir('data')) and (datetime.now().strftime('%m-%d') != current_date.strftime('%m-%d')):
             current_date += timedelta(days=1)
-            result = pd.concat([result,pd.read_excel('data/'+filename)],ignore_index=True)
-            continue
+            dfx = pd.read_excel('data/'+filename)
+            if len(dfx)>1:
+                result = pd.concat([result,dfx],ignore_index=True)
+                continue
         try :
             df = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment', 'bukti_sentiment', 'judul', 'link', 'reporter'])
             date_str = current_date.strftime("%m/%d/%Y")  # Format: MM/DD/YYYY untuk `cd_min` dan `cd_max`
