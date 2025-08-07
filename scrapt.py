@@ -6,10 +6,12 @@ import json,re,os
 import requests  # masih bisa dipakai untuk fallback
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 import time,base64
 import dateparser
 import threading
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 # import queue
 # from tkinter import *
 # from tkinter.scrolledtext import ScrolledText
@@ -175,6 +177,9 @@ def main(start="08-01",end="08-02") -> pd.DataFrame:
                     print('[INFO] mengambil berita dari '+link)
                     driver.get(link)
                     time.sleep(3)  # Tunggu render JS
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.TAG_NAME, "p"))
+                    )
                     page_html = driver.page_source
                     beauti = bs4.BeautifulSoup(page_html, 'html.parser')
                     beauti = beauti.text
