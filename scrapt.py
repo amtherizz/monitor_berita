@@ -51,7 +51,11 @@ system_prompt = """
         2.  **sumber_media**: Identifikasi nama media yang memublikasikan berita ini.
         3.  **narasumber**: Cari nama-nama orang yang dikutip atau diwawancarai dalam berita. Jika tidak ada, biarkan kosong.
         4.  **reporter**: Cari nama penulis atau reporter berita. Jika tidak ada, biarkan kosong.
-        5.  **sentiment**: Analisis sentimen berita **khususnya terhadap Badan Informasi Geospasial (BIG)**. Pertimbangkan bagaimana peran, tindakan, atau dampak BIG digambarkan dalam berita secara objektif. Berikan nilai 'positif', 'netral', atau 'negatif'. **Jangan berasumsi sentimen selalu positif hanya karena BIG adalah lembaga pemerintah atau karena ada komitmen positif secara umum. Fokus pada *peran BIG* dalam narasi berita.**
+        5. **sentiment**: Lakukan analisis sentimen terhadap **peran atau tindakan BIG dalam konteks artikel**. Pilih salah satu dari: `"positif"`, `"netral"`, atau `"negatif"`. 
+            - Fokuskan pada konteks nyata, bukan pada opini subjektif dari satu pihak saja.
+            - Jangan menilai sentimen hanya berdasarkan **pendapat atau kutipan satu orang**, terutama jika orang tersebut **tidak memiliki pengaruh signifikan atau tidak mewakili sudut pandang utama berita**.
+            - Abaikan bias institusional atau pujian kosong yang tidak didukung fakta atau dampak nyata.
+
         6.  **bukti_sentiment**: Ekstrak **satu atau beberapa kalimat langsung dari berita yang paling jelas dan *objektif* menunjukkan atau mendukung sentimen yang Anda berikan untuk Badan Informasi Geospasial (BIG)**. Kalimat ini harus secara eksplisit menyebutkan atau merujuk pada BIG dan secara konkret menunjukkan nuansa positif dan negatif terkait peran atau kontribusi BIG dalam konteks berita tersebut. Jika sentimennya 'netral', kosongkan saja.
 
         **Format Output (HARUS JSON):**
