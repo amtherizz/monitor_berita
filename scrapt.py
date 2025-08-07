@@ -144,10 +144,10 @@ def main(start="08-01",end="08-02") -> pd.DataFrame:
     while current_date <= end_date:
         filename = current_date.strftime('%m-%d')+'.xlsx'
         if (filename in os.listdir('data')) and (datetime.now().strftime('%m-%d') != current_date.strftime('%m-%d')):
-            current_date += timedelta(days=1)
             dfx = pd.read_excel('data/'+filename)
-            if len(dfx)>1:
+            if current_date<=(datetime.now() - timedelta(days=2)):
                 result = pd.concat([result,dfx],ignore_index=True)
+                current_date += timedelta(days=1)
                 continue
         try :
             df = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment', 'bukti_sentiment', 'judul', 'link', 'reporter'])
