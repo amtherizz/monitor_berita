@@ -8,24 +8,63 @@
 </head>
 <body class="container">
     <h1 class="my-4 text-center">Dashboard Monitoring Berita BIG</h1>
+    <form method="get" class="mb-4">
+        <div class="form-row">
+            <div class="col">
+                <label for="start">Tanggal Mulai (MM-DD)</label>
+                <input type="text" class="form-control" name="start" id="start"
+                       placeholder="12-01"
+                       value="{{ request.args.get('start', '') }}">
+            </div>
+            <div class="col">
+                <label for="end">Tanggal Akhir (MM-DD)</label>
+                <input type="text" class="form-control" name="end" id="end"
+                       placeholder="12-30"
+                       value="{{ request.args.get('end', '') }}">
+            </div>
+            <!-- <div class="col">
+                <label>Kata Kunci</label>
+                <div class="form-group border p-2" style="max-height: 200px; overflow-y: auto;">
+                    {% for keyword in keywords %}
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                type="checkbox"
+                                name="query"
+                                value="{{ keyword }}"
+                                id="check_{{ loop.index }}"
+                                {% if keyword in request.args.getlist('query') %}checked{% endif %}>
+                            <label class="form-check-label" for="check_{{ loop.index }}">
+                                {{ keyword }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div> -->
 
+
+
+            <div class="col align-self-end">
+                <button type="submit" class="btn btn-primary btn-block mt-4">Terapkan Filter</button>
+            </div>
+        </div>
+    </form>
+    
     <h3>Persentase sentiment (pie chart)</h3>
         {{graph_sentimen|safe}}
 
     <h3>Jumlah sentiment (bar chart)</h3>
 
         {{ graph_sentimenbar|safe }}
+
+    <div class="my-4">
+        <h3>20 Kata Paling Sering Muncul</h3>
+        <div id="kata"></div>
+    </div>
     {% if wc_p %}
-        <div class="my-4">
-            <h3>WordCloud Isu Positif</h3>
-            <img src="{{ url_for('static', filename='wordcloud_positif.png') }}" class="img-fluid">
-        </div>
+        {{wc_p|safe}}
     {% endif %}
     {% if wc_n %}
-        <div class="my-4">
-            <h3>WordCloud Isu Negatif</h3>
-            <img src="{{ url_for('static', filename='wordcloud_negatif.png') }}" class="img-fluid">
-        </div>
+        {{wc_n|safe}}
     {% endif %}
     
 
@@ -35,6 +74,11 @@
     <h3>Timeline Jumlah Berita</h3>
         {{graph_waktu|safe}}
 
+    <div class="my-2 text-right">
+        <a href="{{ url_for('download', **request.args) }}" class="btn btn-success">
+            Unduh Excel (.xlsx)
+        </a>
+    </div>
 
     <div class="my-4">
         <h3>Data Berita</h3>

@@ -1,14 +1,15 @@
+from newspaper import Article
 import json,requests,bs4
 import dateparser,csv
 import pandas as pd
 import uuid
 import json,re,os
 import requests  # masih bisa dipakai untuk fallback
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 import time,base64
 import dateparser
 import threading
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -56,7 +57,6 @@ system_prompt = """
             - Jangan menilai sentimen hanya berdasarkan **pendapat atau kutipan satu orang**, terutama jika orang tersebut **tidak memiliki pengaruh signifikan atau tidak mewakili sudut pandang utama berita**.
             - Abaikan bias institusional atau pujian kosong yang tidak didukung fakta atau dampak nyata.
 
-        6.  **bukti_sentiment**: Ekstrak **satu atau beberapa kalimat langsung dari berita yang paling jelas dan *objektif* menunjukkan atau mendukung sentimen yang Anda berikan untuk Badan Informasi Geospasial (BIG)**. Kalimat ini harus secara eksplisit menyebutkan atau merujuk pada BIG dan secara konkret menunjukkan nuansa positif dan negatif terkait peran atau kontribusi BIG dalam konteks berita tersebut. Jika sentimennya 'netral', kosongkan saja.
 
         **Format Output (HARUS JSON):**
         ```json
@@ -66,7 +66,7 @@ system_prompt = """
           "narasumber": null,
           "reporter": null,
           "sentiment": "positif/netral/negatif",
-          "bukti_sentiment":"..."
+
         }
         ```
         **Catatan Penting:**
@@ -81,43 +81,47 @@ system_prompt = """
 idusr,idsys = str(uuid.uuid4()),str(uuid.uuid4())
 def ekstrak_berita(news: str) -> str:
     headers = {
-        'User-Agent': 'Ktor client',
-        'Connection': 'Keep-Alive',
-        'Accept': 'application/json',
-        'Accept-Charset': 'UTF-8',
+        'User-Agent': 'ktor-client',
+        'Accept': 'application/json,text/event-stream',
+        'streaming': 'true',
+        'x-accel-buffering': 'no',
+        'accept-charset': 'UTF-8',
+        'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI4YWZhZDRiYi00YjEwLTRmNWEtOWIzNS0zNTJhMmMxYTMyZWMiLCJpbnRlZ3JpdHlDaGVjayI6dHJ1ZSwiYmFzZVVybCI6ImNoYXRseTovL29hdXRoIiwicHJvZHVjdFZhbGlkRm9yIjoiQ0hBVExZIiwiaWF0IjoxNzU1NTczNTU0LCJleHAiOjE3NTU1OTUxNTQsInN1YiI6IjhhZmFkNGJiLTRiMTAtNGY1YS05YjM1LTM1MmEyYzFhMzJlYyJ9.kpkcD5BAKLkcMYs4Db6aeYN_519AztCTOnQ7OqRKra4',
     }
-
     files = {
         'data': (None, json.dumps({
-            "id": str(uuid.uuid4()),
-            "model": "vgpt-g2-4",
-            "messages": [
-                {
-                    "content": system_prompt,
-                    "id": idsys,
-                    "role": "system",
-                    "model": "vgpt-g2-4"
-                },
-                {
-                    "content": news,
-                    "id": idusr,
-                    "role": "user",
-                    "model": "vgpt-g2-4"
-                }
-            ]
-        })),
+    "id": "109dc4ec-cbcf-41fb-95d2-5e49b2076cce",
+    "model": "vgpt-g3-m",
+    "messages": [
+                    {
+                        "content": system_prompt,
+                        "id": idsys,
+                        "role": "system",
+                        "model": "vgpt-g2-4"
+                    },
+                    {
+                        "content": [
+                                {
+                                "type": "text",
+                                "text": news
+                                }
+                            ],
+                        "id": idusr,
+                        "role": "user",
+                        "model": "vgpt-g2-4"
+                    }
+                ],
+    "temperature": 0.5,
+    "stream": True
+    }), None, {'Content-Type': 'application/json'}),
     }
 
-    response = requests.post(
-        'https://streaming.vyro.ai/v1/chatly/android/chat/completions',
-        headers=headers,
-        files=files,
-        stream=True
-    )
+    response = requests.post('https://streaming-chatly.vyro.ai/v1/chat/completions', headers=headers, files=files)
 
     output = ""
     # print(response.content)
     for line in response.iter_lines(decode_unicode=True):
+        print(line)
         if not line:
             continue
 
@@ -135,13 +139,13 @@ def ekstrak_berita(news: str) -> str:
     try:
         json_match = re.search(r"```(?:json)?(.*?)```", output, re.DOTALL).group(1).strip()
         return json.loads(json_match)
-    except:print(output)
+    except:print(response.text)
 
-def main(start="08-01",end="08-02") -> pd.DataFrame:
+def main(start="08-01",end="08-02",dw=False) -> pd.DataFrame:
     from datetime import datetime, timedelta
     start_date = datetime.strptime("2025-"+start, "%Y-%m-%d")
     end_date = datetime.strptime("2025-"+end, "%Y-%m-%d")
-    result = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment','bukti_sentiment', 'judul', 'link', 'reporter'])
+    result = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment', 'judul', 'link', 'reporter'])
     # Loop per tanggal
     print('[INFO] tanggal awal '+start_date.strftime("%Y/%m/%d"))
     print('[INFO] tanggal akhir '+end_date.strftime("%Y/%m/%d"))
@@ -151,12 +155,14 @@ def main(start="08-01",end="08-02") -> pd.DataFrame:
         filename = current_date.strftime('%m-%d')+'.xlsx'
         if (filename in os.listdir('data')) and (datetime.now().strftime('%m-%d') != current_date.strftime('%m-%d')):
             dfx = pd.read_excel('data/'+filename)
-            if current_date<=(datetime.now() - timedelta(days=2)):
+            if dw or current_date<=(datetime.now() - timedelta(days=1)):
+            # if True:
                 result = pd.concat([result,dfx],ignore_index=True)
                 current_date += timedelta(days=1)
                 continue
-        try :
-            df = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment', 'bukti_sentiment', 'judul', 'link', 'reporter'])
+        # try :
+        if True:
+            df = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment', 'judul', 'link', 'reporter'])
             date_str = current_date.strftime("%m/%d/%Y")  # Format: MM/DD/YYYY untuk `cd_min` dan `cd_max`
             print('[INFO] mengambil berita tanggal '+date_str)
             url = (
@@ -165,57 +171,65 @@ def main(start="08-01",end="08-02") -> pd.DataFrame:
                 f"&tbs=cdr:1,cd_min:{date_str},cd_max:{date_str}&tbm=nws"
                 "&api_key=2a7541196951883a06ca6d92ac203f21571a303682cf95ee5adeda2935091f2d"
             )
-
+            # print(url)
+            # exit()
             # Lakukan request
             response = requests.get(url)
             js = response.json()
             news = js.get('news_results',[])
+            # if (filename in os.listdir('data')):
+            #     dfx = pd.read_excel('data/'+filename)
+            #     if len(dfx)<=len(news):
+                    
             for x in news:
                 driver = webdriver.Chrome(options=options)
-                link = x['link']
+                link : str= x['link']
                 title = x['title']
-                media = x['source']
+                media = x.get('source',link.split('/')[2])
                 date = date_str
 
                 try:
                     print('[INFO] mengambil berita dari '+link)
                     driver.get(link)
                     time.sleep(3)  # Tunggu render JS
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.TAG_NAME, "p"))
-                    )
+                    # WebDriverWait(driver, 10).until(
+                    #     EC.presence_of_element_located((By.TAG_NAME, "p"))
+                    # )
                     page_html = driver.page_source
-                    beauti = bs4.BeautifulSoup(page_html, 'html.parser')
-                    beauti = beauti.text
+                    # beauti = bs4.BeautifulSoup(page_html, 'html.parser')
+                    article = Article(link, language="id")
+                    article.download(page_html)
+                    article.parse()
+                    beauti = article.text
                 except Exception as e:
                     print(f"[GAGAL] mengambil {link} dengan error: {e}")
                     beauti = ''
 
                 ex_news = ekstrak_berita(beauti) if beauti else None
-
+                print(ex_news)
                 if ex_news:
                     try:
                         print('[INFO] extrak berita dari '+link)
                         narasumber = ','.join(ex_news['narasumber']) if isinstance(ex_news['narasumber'], list) else ex_news['narasumber'] or ''
                         sentimen = ex_news['sentiment'] if ex_news['sentiment'] else 'netral'
                         reporter = ex_news['reporter'] if ex_news['reporter'] else ''
-                        bukti = ex_news['bukti_sentiment']
+                        # bukti = ex_news['bukti_sentiment']
                     except Exception as e:
                         print(f"[ERROR parsing ex_news] {e} => {ex_news}")
-                        narasumber, sentimen, reporter, bukti = '', 'netral', '', ''
+                        narasumber, sentimen, reporter  = '', 'netral', ''
                 else:
-                    narasumber, sentimen, reporter, bukti = '', 'netral', '', ''
-                if not bukti:
+                    narasumber, sentimen, reporter  = '', 'netral', ''
+                if not ex_news['inti_berita']:
                     fullpage_screenshot(driver,media+".png")
                 driver.quit()
-                df.loc[len(df)] = [media, date, ex_news['inti_berita'] if ex_news else '', narasumber, sentimen, bukti , title, link, reporter]
+                df.loc[len(df)] = [media, date, ex_news['inti_berita'] if ex_news else '', narasumber, sentimen , title, link, reporter]
                 print(df.loc[len(df)-1])
             # Lanjut ke hari berikutnya
             current_date += timedelta(days=1)
             result = pd.concat([result,df],ignore_index=True)
             df.to_excel('data/'+filename,index=False)   
-        except Exception as e:
-            print('[ERROR] '+str(e))
+        # except Exception as e:
+        #     print('[ERROR] '+str(e))
     return result
 # os.makedirs('data',exist_ok=True)
-# main(start='07-17',end='07-30').to_excel('07_17-07_30.xlsx',index=False)
+# main(start='08-01',end='08-14').to_excel('08_01-08_14.xlsx',index=False)
