@@ -1,58 +1,77 @@
-#!/usr/bin/env python3
-import requests
+import torch
+from torch.utils.data import DataLoader
+from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
+from datasets import Dataset
+import pandas as pd
 
-base_url = "https://ihexpo-app.eventstrat.ai/api/event/users/170"
-headers = {
-    'User-Agent': "Dart/3.8 (dart:io)",
-    'Accept-Encoding': "gzip",
-    'content-type': "application/json",
-    'authorization': "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjJiN2JhZmIyZjEwY2FlMmIxZjA3ZjM4MTZjNTQyMmJlY2NhNWMyMjMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vaWVtbC0tLWloZXhwbyIsImF1ZCI6ImllbWwtLS1paGV4cG8iLCJhdXRoX3RpbWUiOjE3NTQ3MDQ2MjgsInVzZXJfaWQiOiI1R0VGR2IydVgzVjdKUmlETWs4RlJ2RTdEVmoyIiwic3ViIjoiNUdFRkdiMnVYM1Y3SlJpRE1rOEZSdkU3RFZqMiIsImlhdCI6MTc1NDc1Mzg4OCwiZXhwIjoxNzU0NzU3NDg4LCJlbWFpbCI6ImluZm9Ac2FuZHNtZXJjaGFuZGlzaW5nLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyJpbmZvQHNhbmRzbWVyY2hhbmRpc2luZy5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.pO8MpDDrIOb7O1pqNyaw5OqF2kE1TViyBiLQd7KqVrhTRobrj_aohLhnx0DbsmE09d7NitQCCnPBWqpX5Ar0eYUW6S1PQgfJVV3blNNiZEERLZL_UDRwDTxnx_LIfMJwb2T2No6go-bUIZoGEBMc7UhBQhpTTpdfnsDfoGPOn145PKdkRe2CTKEr7wZ54txkOj9dRfVAhU0ipWzW6XapxO0xQYDwoK1R_ZGQTTcpHuUaCGR3M63YMGQuH6umeL1k8r2V7TlKMqKf6FgWHt3HWC3KGbKJilN-W0c--gO3RQzXkupi3X6M_Q09ZmbpIsEurd1wRU8mUnQIzZg2HbH18Q"
-}
+# =======================================
+# 1. Dataset contoh (artikel berita panjang)
+# =======================================
+data = pd.read_excel(r"C:\Users\idris\Downloads\berita(3).xlsx")
+# Mapping label ke angka
+label2id = {"negatif": -1, "positif": 1,'netral':0}
+data["sentiment"] = [label2id[x] for x in data["sentiment"]]
+data['full'] = data['full'].astype(str)
+# Convert ke HuggingFace Dataset
+dataset = Dataset.from_pandas(data)
 
-all_data = []
-page_number = 1
-page_size = 100
-total_records = 0
+# =======================================
+# 2. Tokenisasi IndoBERT
+# =======================================
+tokenizer = BertTokenizer.from_pretrained("indobenchmark/indobert-base-p1")
 
-while True:
-    params = {
-        'pageSize': page_size,
-        'pageNumber': page_number,
-        'userCohort': 'EXHIBITOR'
-    }
-    
-    print(f" Fetching page {page_number}...")
-    response = requests.get(base_url, headers=headers, params=params)
-    
-    if response.status_code != 200:
-        print(f" Error on page {page_number}: HTTP {response.status_code}")
-        print(response.text)
-        break
-    
-    response_data = response.json()
-    print(response_data)
-    current_page_data = response_data.get('data', [])
-    meta = response_data.get('meta', {})
-    
-    if not current_page_data:
-        print("No more data available. Stopping.")
-        break
-    
-    all_data.extend(current_page_data)
-    records_fetched = len(current_page_data)
-    total_records += records_fetched
-    
-    print(f" Page {page_number}: Added {records_fetched} records (Total: {total_records})")
-    print(f"   Meta: {meta}")  # Debug: Show pagination metadata
-    
-    # Update total count from meta if available
-    if 'userCount' in meta:
-        total_records = meta['userCount']
-    
-    # Move to next page
-    page_number += 1
+def tokenize(batch):
+    return tokenizer(batch["full"], padding="max_length", truncation=True, max_length=1000)
 
-print(f"\n🎉 Completed! Fetched {len(all_data)} exhibitor records.")
-print(f"   Total pages processed: {page_number - 1}")
-print(f"   First record: {all_data[0]['companyName'] if all_data else 'N/A'}")
-print(f"   Last record: {all_data[-1]['companyName'] if all_data else 'N/A'}")
+dataset = dataset.map(tokenize, batched=True)
+dataset = dataset.train_test_split(test_size=0.2)
+
+# =======================================
+# 3. Load Model IndoBERT
+# =======================================
+model = BertForSequenceClassification.from_pretrained(
+    "indobenchmark/indobert-base-p1",
+    num_labels=2
+)
+
+# =======================================
+# 4. Training
+# =======================================
+training_args = TrainingArguments(
+    output_dir="./results",
+    evaluation_strategy="epoch",
+    per_device_train_batch_size=2,
+    per_device_eval_batch_size=2,
+    num_train_epochs=3,
+    weight_decay=0.01,
+    logging_dir="./logs",
+    logging_steps=10,
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=dataset["train"],
+    eval_dataset=dataset["test"],
+    tokenizer=tokenizer
+)
+
+trainer.train()
+
+# =======================================
+# 5. Evaluasi & Prediksi
+# =======================================
+preds = trainer.predict(dataset["test"])
+print(preds.predictions.argmax(axis=1))  # hasil prediksi label
+
+# Uji dengan artikel baru
+test_text = ["BIG meningkatkan kualitas layanan peta digital nasional",
+             "Banyak masalah dalam proyek BIG terbaru"]
+
+tokens = tokenizer(test_text, padding=True, truncation=True, max_length=256, return_tensors="pt")
+outputs = model(**tokens)
+predictions = torch.nn.functional.softmax(outputs.logits, dim=-1)
+
+for i, text in enumerate(test_text):
+    label = "Positif" if predictions[i][1] > predictions[i][0] else "Negatif"
+    print(text, "=>", label)
