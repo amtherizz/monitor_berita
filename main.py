@@ -2,11 +2,8 @@ from flask import Flask, render_template,request,send_file,after_this_request,js
 import pandas as pd
 from datetime import datetime, timedelta
 import plotly.express as px
-import plotly
 import scrapt,io
 import json,re,os
-from dotenv import load_dotenv,set_key
-from wordcloud import WordCloud
 from collections import Counter
 env = '.env'
 
@@ -152,7 +149,7 @@ def index():
         sentimen_count,
         x='sentiment',
         y='count',
-        text=sentimen_count['count'].tolist(),  # FIXED: gunakan list
+        text=sentimen_count['count'].tolist(),
         color='sentiment',
         color_discrete_map=warna_sentimen,
         title='Jumlah Berita per Sentimen'
@@ -160,7 +157,7 @@ def index():
     fig_bar_sentimen.update_traces(textposition='outside')
     fig_bar_sentimen.update_layout(yaxis_range=[0, sentimen_count['count'].max() + 5])
     return render_template('index.html', 
-                           tables=[df.to_html(classes='table table-striped', index=False)],
+                           tables=[df.to_html(classes='table table-striped', index=False,table_id="myTable")],
                            wc_p=wcp.to_html(full_html=False) if wcp else None,
                            wc_n=wcn.to_html(full_html=False) if wcn else None,
                            keywords=load_keywords(),

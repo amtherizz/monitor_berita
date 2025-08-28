@@ -1,27 +1,17 @@
 from newspaper import Article
-import json,requests,bs4
+import json,requests,bs4,re,os
 import dateparser,csv
 import pandas as pd
 import uuid
-import json,re,os
-import requests  # masih bisa dipakai untuk fallback
+import requests
 import time,base64
-import dateparser
 import threading
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-# import queue
-# from tkinter import *
-# from tkinter.scrolledtext import ScrolledText
-# from tkinter import messagebox
-# should_stop = False
 
-# # Queue untuk komunikasi log antar thread
-# log_queue = queue.Queue()
-# Setup Selenium (headless)
 options = Options()
 options.add_argument('--headless')
 options.add_argument('--no-sandbox')
@@ -120,9 +110,7 @@ def ekstrak_berita(news: str) -> str:
     response = requests.post('https://streaming-chatly.vyro.ai/v1/chat/completions', headers=headers, files=files)
 
     output = ""
-    # print(response.content)
     for line in response.iter_lines(decode_unicode=True):
-        # print(line)
         if not line:
             continue
 
@@ -133,7 +121,6 @@ def ekstrak_berita(news: str) -> str:
             try:
                 data_json = json.loads(line[6:])
                 content = data_json.get("content", "")
-                # print(content)
                 output += content
             except json.JSONDecodeError as e:
                 print("Gagal parse JSON:", line)
@@ -142,7 +129,6 @@ def ekstrak_berita(news: str) -> str:
         return json.loads(json_match)
     except:print(response.text)
 def find_keywords(article: str, keywords: list) -> list:
-    # try:
         # ubah jadi huruf kecil semua biar pencarian tidak case-sensitive
         if not isinstance(article, str):
             return []
@@ -151,9 +137,6 @@ def find_keywords(article: str, keywords: list) -> list:
         # cek keyword satu per satu
         found = [kw for kw in keywords if kw.lower() in article_lower]
         return found
-    # except:
-        # print(article)
-        # raise
 def main(start="08-01",end="08-02",query=['badan informasi geospasial'],dw=False,force=False) -> pd.DataFrame:
     from datetime import datetime, timedelta
     start_date = datetime.strptime("2025-"+start, "%Y-%m-%d")
@@ -162,7 +145,6 @@ def main(start="08-01",end="08-02",query=['badan informasi geospasial'],dw=False
     # Loop per tanggal
     print('[INFO] tanggal awal '+start_date.strftime("%Y/%m/%d"))
     print('[INFO] tanggal akhir '+end_date.strftime("%Y/%m/%d"))
-    # return filename
     current_date = start_date
     while current_date <= end_date:
         filename = current_date.strftime('%m-%d')+'.xlsx'
@@ -170,97 +152,81 @@ def main(start="08-01",end="08-02",query=['badan informasi geospasial'],dw=False
             if (filename in os.listdir(folderberita+'')) and (datetime.now().strftime('%m-%d') != current_date.strftime('%m-%d')):
                 dfx = pd.read_excel(folderberita+'/'+filename)
                 if dw or current_date<=(datetime.now() - timedelta(days=2)):
-                # if True:
-                    # dfx.columns.append("keyword")
                     dfx["keyword"] = dfx["full"].apply(lambda x: find_keywords(x, query))
                     dfx = dfx.loc[:, ~dfx.columns.str.contains('^Unnamed')]
                     dfx.to_excel(folderberita+'/'+filename)
-                    # mask = dfx["keyword"].apply(lambda kws: "badan informasi geospasial" in kws if isinstance(kws, list) else False)
-                    # dfx = dfx[mask]
                     result = pd.concat([result,dfx],ignore_index=True)
                     current_date += timedelta(days=1)
                     continue
-        # try :
-        if True:
-            df = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment', 'judul', 'link', 'reporter','full','keyword'])
-            date_str = current_date.strftime("%m/%d/%Y")  # Format: MM/DD/YYYY untuk `cd_min` dan `cd_max`
-            print('[INFO] mengambil berita tanggal '+date_str)
-            # def wrap(text, char='"'):return char + text + char
-            # q =  ' | '.join( wrap(x) for x in query)
-            # print(q)
-            for q in query:
-                url = (
-                    f'https://serpapi.com/search.json?engine=google&q={q}'
-                    "&location=Indonesia&google_domain=google.co.id&gl=id&hl=id"
-                    f"&tbs=cdr:1,cd_min:{date_str},cd_max:{date_str}&tbm=nws"
-                    "&api_key=2a7541196951883a06ca6d92ac203f21571a303682cf95ee5adeda2935091f2d"
-                )
-                # print(url)
-                # exit()
-                # Lakukan request
-                response = requests.get(url)
-                js = response.json()
-                news = js.get('news_results',[])
+        df = pd.DataFrame(columns=['media', 'waktu', 'isi isu', 'narasumber', 'sentiment', 'judul', 'link', 'reporter','full','keyword'])
+        date_str = current_date.strftime("%m/%d/%Y")
+        print('[INFO] mengambil berita tanggal '+date_str)
+        for q in query:
+            url = (
+                f'https://serpapi.com/search.json?engine=google&q={q}'
+                "&location=Indonesia&google_domain=google.co.id&gl=id&hl=id"
+                f"&tbs=cdr:1,cd_min:{date_str},cd_max:{date_str}&tbm=nws"
+                "&api_key=2a7541196951883a06ca6d92ac203f21571a303682cf95ee5adeda2935091f2d"
+            )
 
-                for x in news:
-                    if (filename in os.listdir(folderberita+'')):
-                        dfx = pd.read_excel(folderberita+'/'+filename)
-                        if x['link'] in dfx['link']:
-                            dfx["keyword"] = dfx["full"].apply(lambda x: find_keywords(x, query))
-                            dfx = dfx.loc[:, ~dfx.columns.str.contains('^Unnamed')]
-                            dfx.to_excel(folderberita+'/'+filename)
-                            df = pd.concat([result,dfx],ignore_index=True)
-                            # current_date += timedelta(days=1)
-                            continue
-                    driver = webdriver.Chrome(options=options)
-                    link : str= x['link']
-                    title = x['title']
-                    media = x.get('source',link.split('/')[2])
-                    date = date_str
+            # Lakukan request
+            response = requests.get(url)
+            js = response.json()
+            news = js.get('news_results',[])
 
+            for x in news:
+                if (filename in os.listdir(folderberita+'')):
+                    dfx = pd.read_excel(folderberita+'/'+filename)
+                    if x['link'] in dfx['link']:
+                        dfx["keyword"] = dfx["full"].apply(lambda x: find_keywords(x, query))
+                        dfx = dfx.loc[:, ~dfx.columns.str.contains('^Unnamed')]
+                        dfx.to_excel(folderberita+'/'+filename)
+                        df = pd.concat([result,dfx],ignore_index=True)
+                        continue
+                driver = webdriver.Chrome(options=options)
+                link : str= x['link']
+                title = x['title']
+                media = x.get('source',link.split('/')[2])
+                date = date_str
+
+                try:
+                    print('[INFO] mengambil berita dari '+link)
+                    driver.get(link)
+                    # time.sleep(3)  # Tunggu render JS
+                    WebDriverWait(driver, 3).until(
+                        EC.presence_of_element_located((By.TAG_NAME, "p"))
+                    )
+                    page_html = driver.page_source
+                    article = Article(link, language="id")
+                    article.download(page_html)
+                    article.parse()
+                    beauti = article.text
+                except Exception as e:
+                    print(f"[GAGAL] mengambil {link} dengan error: {e}")
+                    beauti = ''
+
+                ex_news = ekstrak_berita(beauti) if beauti else None
+                if ex_news:
                     try:
-                        print('[INFO] mengambil berita dari '+link)
-                        driver.get(link)
-                        # time.sleep(3)  # Tunggu render JS
-                        WebDriverWait(driver, 3).until(
-                            EC.presence_of_element_located((By.TAG_NAME, "p"))
-                        )
-                        page_html = driver.page_source
-                        # beauti = bs4.BeautifulSoup(page_html, 'html.parser')
-                        article = Article(link, language="id")
-                        article.download(page_html)
-                        article.parse()
-                        beauti = article.text
+                        print('[INFO] extrak berita dari '+link)
+                        narasumber = ','.join(ex_news['narasumber']) if isinstance(ex_news['narasumber'], list) else ex_news['narasumber'] or ''
+                        sentimen = ex_news['sentiment'] if ex_news['sentiment'] else 'netral'
+                        reporter = ex_news['reporter'] if ex_news['reporter'] else ''
+                        # bukti = ex_news['bukti_sentiment']
                     except Exception as e:
-                        print(f"[GAGAL] mengambil {link} dengan error: {e}")
-                        beauti = ''
-
-                    ex_news = ekstrak_berita(beauti) if beauti else None
-                    # print(ex_news)
-                    if ex_news:
-                        try:
-                            print('[INFO] extrak berita dari '+link)
-                            narasumber = ','.join(ex_news['narasumber']) if isinstance(ex_news['narasumber'], list) else ex_news['narasumber'] or ''
-                            sentimen = ex_news['sentiment'] if ex_news['sentiment'] else 'netral'
-                            reporter = ex_news['reporter'] if ex_news['reporter'] else ''
-                            # bukti = ex_news['bukti_sentiment']
-                        except Exception as e:
-                            print(f"[ERROR parsing ex_news] {e} => {ex_news}")
-                            narasumber, sentimen, reporter  = '', 'netral', ''
-                        if not ex_news.get('inti_berita'):
-                            fullpage_screenshot(driver,media+".png")
-                    else:
+                        print(f"[ERROR parsing ex_news] {e} => {ex_news}")
                         narasumber, sentimen, reporter  = '', 'netral', ''
-                    
-                    driver.quit()
-                    df.loc[len(df)] = [media, date, ex_news['inti_berita'] if ex_news else '', narasumber, sentimen , title, link, reporter,beauti,find_keywords(beauti,query)]
-                # print(df.loc[len(df)-1])
-            # Lanjut ke hari berikutnya
-            current_date += timedelta(days=1)
-            result = pd.concat([result,df],ignore_index=True)
-            df.to_excel(folderberita+'/'+filename,index=False)   
-        # except Exception as e:
-        #     print('[ERROR] '+str(e))
+                    if not ex_news.get('inti_berita'):
+                        fullpage_screenshot(driver,media+".png")
+                else:
+                    narasumber, sentimen, reporter  = '', 'netral', ''
+                
+                driver.quit()
+                df.loc[len(df)] = [media, date, ex_news['inti_berita'] if ex_news else '', narasumber, sentimen , title, link, reporter,beauti,find_keywords(beauti,query)]
+        # Lanjut ke hari berikutnya
+        current_date += timedelta(days=1)
+        result = pd.concat([result,df],ignore_index=True)
+        df.to_excel(folderberita+'/'+filename,index=False)   
     return result
 # os.makedirs(folderberita+'',exist_ok=True)
 # main(start='08-01',end='08-14').to_excel('08_01-08_14.xlsx',index=False)

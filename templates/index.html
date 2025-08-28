@@ -5,6 +5,10 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link rel="stylesheet"
           href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" 
+      href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 </head>
 <body class="container">
     <h1 class="my-4 text-center">Dashboard Monitoring Berita BIG</h1>
@@ -90,5 +94,28 @@
             {{ tables[0]|safe }}
         </div>
     </div>
+    <script>
+$('#myTable').DataTable({
+    pageLength: 10,
+    initComplete: function () {
+        // Tambah baris header baru untuk filter
+        $('#myTable thead').append('<tr class="filters"></tr>');
+        this.api().columns().every(function () {
+            var column = this;
+            var select = $('<select><option value="">Semua</option></select>')
+                .appendTo($('#myTable thead tr.filters').append('<th></th>').find('th').last())
+                .on('change', function () {
+                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                    column.search(val ? '^'+val+'$' : '', true, false).draw();
+                });
+
+            column.data().unique().sort().each(function (d, j) {
+                select.append('<option value="'+d+'">'+d+'</option>');
+            });
+        });
+    }
+});
+
+</script>
 </body>
 </html>
