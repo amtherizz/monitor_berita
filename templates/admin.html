@@ -1,8 +1,31 @@
 <!doctype html>
 <html>
 <head>
-  <title>Admin Panel</title>
+  <title>Halaman Admin</title>
   <style>
+  table.editable-table {
+    border-collapse: collapse;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #ddd;
+  }
+  table.editable-table th, table.editable-table td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    min-width: 100px;
+  }
+  table.editable-table th {
+    background: #3498db;
+    color: white;
+    text-align: left;
+  }
+  table.editable-table td[contenteditable="true"] {
+    background: #fdfde7;
+  }
+</style>
+
+  <style>
+    
     body {
       font-family: Arial, sans-serif;
       background-color: #f5f7fa;
@@ -102,6 +125,25 @@
     <div id="scrapt-result"></div>
   </div>
 
+  <!-- ====== Edit Data Berita ====== -->
+  <h2>Edit Data Berita</h2>
+  <div style="margin-bottom:15px;">
+    <label for="file-select"><b>Pilih File:</b></label>
+    <select id="file-select" style="padding:5px; margin-right:10px;"></select>
+    <button onclick="loadSelectedFile()">Muat Tabel</button>
+  </div>
+
+  <!-- Tabel ditaruh langsung di luar agar bisa penuh -->
+  <div id="edit-table" style="margin-top:20px; overflow-x:auto;"></div>
+
+  <!-- Tombol simpan juga di luar -->
+  <div style="margin-top:10px;">
+    <button id="save-btn" style="display:none;" onclick="saveEdits()">Simpan Perubahan</button>
+  </div>
+
+
+
+
   <script>
     function addKeyword() {
       let newKw = document.getElementById("new-kw").value.trim();
@@ -137,5 +179,93 @@
       document.getElementById("scrapt-result").innerText = `Status: ${data.status}, Jumlah data: ${data.jumlah}`;
     }
   </script>
+  <script>
+  let currentFile = "";
+  let currentData = [];
+
+  async function loadTable(filename) {
+  currentFile = filename;
+  let res = await fetch(`/get_file?filename=${filename}`);
+  let data = await res.json();
+  currentData = data;
+
+  if (!data.length) {
+    document.getElementById("edit-table").innerHTML = "<p>Tidak ada data.</p>";
+    return;
+  }
+
+  let keys = Object.keys(data[0]);
+  let table = "<table class='editable-table'><thead><tr>";
+  keys.forEach(k => table += `<th>${k}</th>`);
+  table += "</tr></thead><tbody>";
+
+  data.forEach((row, i) => {
+    table += "<tr>";
+    keys.forEach(k => {
+      table += `<td contenteditable="true" oninput="updateCell(${i}, '${k}', this.innerText)">${row[k]}</td>`;
+    });
+    table += "</tr>";
+  });
+
+  table += "</tbody></table>";
+  document.getElementById("edit-table").innerHTML = table;
+  document.getElementById("save-btn").style.display = "inline-block";
+}
+
+
+  function updateCell(rowIndex, colName, newVal) {
+    currentData[rowIndex][colName] = newVal;
+  }
+
+  async function saveEdits() {
+    let edits = [];
+
+    currentData.forEach((row, i) => {
+      for (let col in row) {
+        edits.push({wow: i, col: col, val: row[col]});
+      }
+    });
+
+    let res = await fetch("/edit", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({filename: currentFile, write: edits})
+    });
+
+    let data = await res.json();
+    if (data.status === "ok") {
+      alert("Perubahan disimpan!");
+      loadTable(currentFile);
+    } else {
+      alert("Error: " + data.msg);
+    }
+  }
+  async function loadFiles() {
+  let res = await fetch("/list_files");
+  let files = await res.json();
+  let select = document.getElementById("file-select");
+  select.innerHTML = "";
+  files.forEach(f => {
+    let opt = document.createElement("option");
+    opt.value = f;
+    opt.innerText = f;
+    select.appendChild(opt);
+  });
+}
+
+// dipanggil saat klik tombol "Muat Tabel"
+function loadSelectedFile() {
+  let filename = document.getElementById("file-select").value;
+  if (filename) {
+    loadTable(filename); // fungsi loadTable kamu yang sudah ada
+  }
+}
+
+// otomatis load daftar file saat halaman admin terbuka
+document.addEventListener("DOMContentLoaded", loadFiles);
+
+  </script>
+  
+
 </body>
 </html>

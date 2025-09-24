@@ -1,121 +1,178 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Monitoring Berita</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Monitoring Berita BIG</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <link rel="stylesheet"
-          href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" 
-      href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            margin-bottom: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            font-weight: bold;
+        }
+        /* Perbaikan untuk tabel agar teks tidak memanjang ke bawah */
+        .table-responsive {
+            overflow-x: auto;
+        }
+        #myTable td {
+            white-space: nowrap;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
 </head>
 <body class="container">
-    <h1 class="my-4 text-center">Dashboard Monitoring Berita BIG</h1>
-    <form method="get" class="mb-4">
-        <div class="form-row">
-            <div class="col">
-                <label for="start">Tanggal Mulai (MM-DD)</label>
-                <input type="text" class="form-control" name="start" id="start"
-                       placeholder="12-01"
-                       value="{{ request.args.get('start', '') }}">
-            </div>
-            <div class="col">
-                <label for="end">Tanggal Akhir (MM-DD)</label>
-                <input type="text" class="form-control" name="end" id="end"
-                       placeholder="12-30"
-                       value="{{ request.args.get('end', '') }}">
-            </div>
-            <div class="col">
-                <label>Kata Kunci</label>
-                <div class="form-group border p-2" style="max-height: 200px; overflow-y: auto;">
-                    {% for keyword in keywords %}
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                type="checkbox"
-                                name="query"
-                                value="{{ keyword }}"
-                                id="check_{{ loop.index }}"
-                                {% if keyword in keywords_ %}checked
-                                    
-            
-
-                                {% endif %}>
-                            <label class="form-check-label" for="check_{{ loop.index }}">
-                                {{ keyword }}
-                            </label>
+    <h1 class="my-5 text-center text-primary">Dashboard Monitoring Berita BIG</h1>
+    <div class="card mb-4">
+        <div class="card-header">
+            Filter Data
+        </div>
+        <div class="card-body">
+            <form method="get">
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="start">Tanggal Mulai (MM-DD)</label>
+                        <input type="text" class="form-control" name="start" id="start"
+                               placeholder="01-01" value="{{ request.args.get('start', '') }}">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="end">Tanggal Akhir (MM-DD)</label>
+                        <input type="text" class="form-control" name="end" id="end"
+                               placeholder="12-30" value="{{ request.args.get('end', '') }}">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label>Kata Kunci</label>
+                        <div class="form-group border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                            {% for keyword in keywords %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="query"
+                                       value="{{ keyword }}" id="check_{{ loop.index }}"
+                                       {% if keyword in keywords_ %}checked{% endif %}>
+                                <label class="form-check-label" for="check_{{ loop.index }}">
+                                    {{ keyword }}
+                                </label>
+                            </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Terapkan Filter</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Persentase Sentimen
+                </div>
+                <div class="card-body">
+                    {{ graph_sentimen|safe }}
                 </div>
             </div>
-
-
-
-            <div class="col align-self-end">
-                <button type="submit" class="btn btn-primary btn-block mt-4">Terapkan Filter</button>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Jumlah Berita per Sentimen
+                </div>
+                <div class="card-body">
+                    {{ graph_sentimenbar|safe }}
+                </div>
             </div>
         </div>
-    </form>
-    
-    <h3>Persentase sentiment (pie chart)</h3>
-        {{graph_sentimen|safe}}
-
-    <h3>Jumlah sentiment (bar chart)</h3>
-
-        {{ graph_sentimenbar|safe }}
-
-    <div class="my-4">
-        <h3>20 Kata Paling Sering Muncul</h3>
-        <div id="kata"></div>
-    </div>
-    {% if wc_p %}
-        {{wc_p|safe}}
-    {% endif %}
-    {% if wc_n %}
-        {{wc_n|safe}}
-    {% endif %}
-    
-
-    <h3>Visualisasi media</h3>
-        {{graph_media|safe}}
-
-    <h3>Timeline Jumlah Berita</h3>
-        {{graph_waktu|safe}}
-
-    <div class="my-2 text-right">
-        <a href="{{ url_for('download', **request.args) }}" class="btn btn-success">
-            Unduh Excel (.xlsx)
-        </a>
     </div>
 
-    <div class="my-4">
-        <h3>Data Berita</h3>
-        <div class="table-responsive">
-            {{ tables[0]|safe }}
+    <div class="card">
+        <div class="card-header">
+            20 Kata Paling Sering Muncul
+        </div>
+        <div class="card-body">
+            {% if wc_n %}
+                {{ wc_n|safe }}
+            {% else %}
+                <p class="text-center text-muted">Data kata paling sering muncul tidak tersedia.</p>
+            {% endif %}
         </div>
     </div>
-    <script>
-$('#myTable').DataTable({
-    pageLength: 10,
-    initComplete: function () {
-        // Tambah baris header baru untuk filter
-        $('#myTable thead').append('<tr class="filters"></tr>');
-        this.api().columns().every(function () {
-            var column = this;
-            var select = $('<select><option value="">Semua</option></select>')
-                .appendTo($('#myTable thead tr.filters').append('<th></th>').find('th').last())
-                .on('change', function () {
-                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
-                    column.search(val ? '^'+val+'$' : '', true, false).draw();
-                });
 
-            column.data().unique().sort().each(function (d, j) {
-                select.append('<option value="'+d+'">'+d+'</option>');
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Visualisasi Media
+                </div>
+                <div class="card-body">
+                    {{ graph_media|safe }}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Timeline Jumlah Berita
+                </div>
+                <div class="card-body">
+                    {{ graph_waktu|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            Data Berita
+            <a href="{{ url_for('download', **request.args) }}" class="btn btn-success btn-sm">
+                <i class="fas fa-download"></i> Unduh Excel (.xlsx)
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                {{ tables[0]|safe }}
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        $(document).ready(function() {
+            $('#myTable').DataTable({
+                "pageLength": 10,
+                "paging": true,
+                "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ],
+                "initComplete": function () {
+                    this.api().columns().every(function () {
+                        var column = this;
+                        var select = $('<select class="form-control form-control-sm"><option value="">Semua</option></select>')
+                            .appendTo($(column.header()))
+                            .on('change', function () {
+                                var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                                column.search(val ? '^' + val + '$' : '', true, false).draw();
+                            });
+                        column.data().unique().sort().each(function (d) {
+                            select.append('<option value="' + d + '">' + d + '</option>');
+                        });
+                    });
+                }
             });
         });
-    }
-});
-
-</script>
+    </script>
 </body>
 </html>
